@@ -113,6 +113,10 @@ export function Dashboard({ role }: { role: RoleKey }) {
   }
 
   const go = (next: Section) => {
+    if (role === 'customer' && next === 'products') return void (window.location.hash = '/customer/shop')
+    if (next === 'orders' && role !== 'admin') return void (window.location.hash = `/${segmentFromRole(role)}/orders`)
+    if (next === 'orders' && role === 'admin') return void (window.location.hash = '/super-admin/orders')
+    if (role === 'rider' && next === 'deliveries') return void (window.location.hash = '/rider/orders')
     setSection(next)
     setMobileOpen(false)
   }
@@ -137,7 +141,7 @@ export function Dashboard({ role }: { role: RoleKey }) {
     if (role === 'customer') return <>
       <section className="welcome-banner customer-banner"><div><span className="eyebrow">Good afternoon</span><h2>Welcome back, {name.split(' ')[0]}.</h2><p>Discover nearby stores and keep track of your latest orders.</p></div><button className="dash-primary" onClick={() => go('products')}>Start shopping <span>→</span></button></section>
       <StatGrid items={[['₦18,500', 'Current order'], ['3', 'Total orders'], ['2', 'Saved addresses'], ['₦64,200', 'Total spent']]} />
-      <section className="dashboard-grid two"><Panel title="Recent orders" action="View all" onAction={() => go('orders')}><OrderTable rows={customerOrders} headers={['Order', 'Store', 'Items', 'Total', 'Status']} /></Panel><Panel title="Quick actions"><div className="quick-actions"><button onClick={() => go('products')}><span>⌕</span> Browse stores</button><button onClick={() => { setCart((n) => n + 1); notify('Sample item added to cart.') }}><span>＋</span> Add to cart</button><button onClick={() => go('settings')}><span>⚙</span> Account settings</button></div></Panel></section>
+      <section className="dashboard-grid two"><Panel title="Recent orders" action="View all" onAction={() => go('orders')}><OrderTable rows={customerOrders} headers={['Order', 'Store', 'Items', 'Total', 'Status']} /></Panel><Panel title="Quick actions"><div className="quick-actions"><button onClick={() => go('products')}><span>⌕</span> Browse stores</button><button onClick={() => { setCart((n) => n + 1); notify('Use Browse Stores to build a vendor-specific cart.') }}><span>＋</span> Add to cart</button><button onClick={() => go('settings')}><span>⚙</span> Account settings</button></div></Panel></section>
     </>
 
     if (role === 'store') return <>
@@ -153,7 +157,7 @@ export function Dashboard({ role }: { role: RoleKey }) {
     </>
 
     return <>
-      <section className="welcome-banner admin-banner"><div><span className="eyebrow">Platform control center</span><h2>Welcome, {name}.</h2><p>Monitor Bi-quicker operations, accounts, stores, riders, and orders.</p></div><button className="dash-primary" onClick={() => go('stores')}>Manage platform</button></section>
+      <section className="welcome-banner admin-banner"><div><span className="eyebrow">Platform control center</span><h2>Welcome, {name}.</h2><p>Monitor Bi-quicker operations, accounts, stores, riders, orders, conversations, and deliveries.</p></div><button className="dash-primary" onClick={() => window.location.hash = '/super-admin/chats'}>Open conversations</button></section>
       <StatGrid items={[['₦4.82M', 'Platform GMV'], ['12,480', 'Customers'], ['1,284', 'Active stores'], ['526', 'Active riders']]} />
       <section className="dashboard-grid three"><MiniMetric title="Orders today" value="1,248" detail="+12.8% vs yesterday" /><MiniMetric title="Delivery success" value="96.4%" detail="Within target" /><MiniMetric title="Support tickets" value="18" detail="6 need attention" /></section>
       <Panel title="Platform activity" action="View all orders" onAction={() => go('orders')}><OrderTable rows={adminOrders} headers={['Order', 'Store', 'Customer', 'Total', 'Status']} /></Panel>
@@ -164,7 +168,7 @@ export function Dashboard({ role }: { role: RoleKey }) {
     if (section === 'overview') return renderOverview()
     if (section === 'settings') return <Panel title={role === 'admin' ? 'Platform settings' : 'Settings'}><div className="settings-form"><label>Account name<input value={name} readOnly /></label><label>Email<input value={session?.email || 'demo@example.com'} readOnly /></label><label>Role<input value={roleLabel[role]} readOnly /></label><button className="dash-primary" onClick={() => notify('Settings are ready for backend persistence.')}>Save changes</button></div></Panel>
     if (section === 'products' && role === 'store') return <Panel title="Product inventory" action="＋ Add product" onAction={addProduct}><OrderTable rows={products} headers={['SKU', 'Product', 'Price', 'Stock', 'Status']} /></Panel>
-    if (section === 'products' && role === 'customer') return <><div className="section-heading"><div><span className="eyebrow">Marketplace</span><h2>Browse stores</h2></div><span className="cart-pill">Cart: {cart}</span></div><div className="store-cards">{['Fresh Basket', 'Tech Hub', 'Home Store', 'Market Square'].map((store) => <article className="store-card" key={store}><div className="store-avatar">{store[0]}</div><div><h3>{store}</h3><p>4.8 ★ · 20–35 min</p><span>View products</span></div><button onClick={() => { setCart((n) => n + 1); notify(`${store} item added to cart.`) }}>＋</button></article>)}</div></>
+    if (section === 'products' && role === 'customer') return <div className="dash-panel"><div className="panel-head"><div><h3>Vendor marketplace</h3><p>Use the dedicated shopping flow to select one vendor, build your cart, checkout and open the vendor conversation.</p></div><button onClick={() => go('products')}>Open marketplace →</button></div></div>
     if (section === 'orders') {
       const headers = role === 'customer' ? ['Order', 'Store', 'Items', 'Total', 'Status'] : role === 'rider' ? ['Order', 'Store', 'Area', 'Fee', 'Status'] : ['Order', role === 'admin' ? 'Store' : 'Customer', role === 'admin' ? 'Customer' : 'Items', 'Total', 'Status']
       const rows = role === 'customer' ? customerOrders : role === 'rider' ? riderDeliveries : role === 'admin' ? adminOrders : orders
