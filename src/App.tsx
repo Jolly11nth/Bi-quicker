@@ -4,7 +4,7 @@ import { SignIn } from './pages/SignIn'
 import { SignUp } from './pages/SignUp'
 import { Dashboard } from './pages/Dashboard'
 import { AdminChatOverview, OrderCenter } from './pages/OrderCenterV2'
-import { roleFromSegment, signInPath } from './lib/roles'
+import { roleFromSegment } from './lib/roles'
 import type { RoleKey } from './lib/types'
 
 type CommerceMode = 'shop' | 'list' | 'order'
