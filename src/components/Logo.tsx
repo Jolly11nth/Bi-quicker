@@ -4,11 +4,12 @@ import './logo-fix.css'
 export function Logo({ small = false }: { small?: boolean }) {
   return (
     <img
-      className={`logo-mark ${small ? 'logo-small' : ''}`}
+      className={`biquicker-logo ${small ? 'logo-small' : ''}`}
       src={logo}
       alt="Bi-quicker"
+      width={small ? 145 : 170}
+      height={small ? 103 : 121}
       draggable={false}
-      style={{ width: small ? 145 : 170, height: 'auto', objectFit: 'contain' }}
     />
   )
 }
