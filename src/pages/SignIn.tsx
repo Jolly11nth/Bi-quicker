@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { AuthHeader, AuthLayout } from '../components/AuthLayout'
 import { ArrowRightIcon, EyeIcon, EyeOffIcon, LockIcon, MailIcon } from '../components/Icons'
 import { Toast } from '../components/Toast'
-import { roles, signUpPath } from '../lib/roles'
+import { roles, segmentFromRole, signUpPath } from '../lib/roles'
 import { findAccount, saveSession } from '../lib/storage'
 import type { RoleKey } from '../lib/types'
 
@@ -28,7 +28,8 @@ export function SignIn({ role }: { role: RoleKey }) {
     }
 
     saveSession({ role, email: normalized, name: account?.name || (role === 'admin' ? 'Super Admin' : 'Demo User') })
-    setToast({ message: 'Welcome back! You are now signed in.' })
+    setToast({ message: 'Welcome back! Opening your dashboard...' })
+    window.setTimeout(() => { window.location.hash = `/${segmentFromRole(role)}/dashboard` }, 450)
   }
 
   const fillDemo = () => {
