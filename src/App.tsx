@@ -3,7 +3,7 @@ import { RoleSelection } from './pages/RoleSelection'
 import { SignIn } from './pages/SignIn'
 import { SignUp } from './pages/SignUp'
 import { Dashboard } from './pages/Dashboard'
-import { AdminChatOverview, OrderCenter } from './pages/OrderCenter'
+import { AdminChatOverview, OrderCenter } from './pages/OrderCenterV2'
 import { roleFromSegment } from './lib/roles'
 import type { RoleKey } from './lib/types'
 
@@ -18,13 +18,11 @@ type Route =
 function parseRoute(): Route {
   const path = window.location.hash.replace(/^#/, '') || '/'
   if (path === '/') return { type: 'home' }
-
   const match = path.match(/^\/(customer|store-admin|rider|super-admin)\/(signin|signup|dashboard|shop|orders|order\/([^/]+))$/)
   if (!match) {
     if (path === '/super-admin/chats') return { type: 'admin-chats' }
     return { type: 'home' }
   }
-
   const role = roleFromSegment(match[1])!
   const segment = match[2]
   if (segment === 'shop') return { type: 'commerce', role, mode: 'shop' }
@@ -35,13 +33,11 @@ function parseRoute(): Route {
 
 export default function App() {
   const [route, setRoute] = useState<Route>(parseRoute())
-
   useEffect(() => {
     const onHash = () => setRoute(parseRoute())
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
-
   if (route.type === 'home') return <RoleSelection />
   if (route.type === 'admin-chats') return <AdminChatOverview />
   if (route.type === 'commerce') return <OrderCenter role={route.role} mode={route.mode} orderId={route.orderId} />
