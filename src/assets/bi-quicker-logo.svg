@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 260" role="img" aria-labelledby="title desc">
+  <title id="title">Bi-quicker</title><desc id="desc">Bi-quicker delivery marketplace logo</desc>
+  <rect width="520" height="260" fill="transparent"/>
+  <path d="M180 24h96c33 0 58 21 58 51 0 23-14 41-35 48 20 9 32 28 32 50 0 34-27 58-65 58h-99l21-34h70c17 0 29-9 29-24 0-14-11-23-28-23h-48l-18-31h69c16 0 27-9 27-23 0-13-11-21-28-21h-80z" fill="#ff4b00"/>
+  <path d="M202 80h49c24 0 39 13 39 32 0 14-8 25-22 31 13 5 21 16 21 30 0 19-15 32-39 32h-57l12-20h42c10 0 17-5 17-14s-7-14-17-14h-35l-12-21h48c10 0 17-5 17-14s-7-13-18-13h-54z" fill="#111"/>
+  <g fill="#fff" stroke="#111" stroke-width="8" stroke-linejoin="round" stroke-linecap="round">
+    <circle cx="164" cy="139" r="31" fill="#fff"/><circle cx="312" cy="139" r="31" fill="#fff"/>
+    <path d="M164 139h53l25-45h31l39 45M217 139l-22-39h35l15 24M242 94l-12-18h28l12 18" fill="none"/>
+  </g>
+  <text x="26" y="245" font-family="Arial, Helvetica, sans-serif" font-size="50" font-weight="700" fill="#111">Bi-quicker</text>
+</svg>
