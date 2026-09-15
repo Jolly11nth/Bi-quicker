@@ -1,1 +1,0 @@
-The exact supplied Bi-quicker logo is stored as src/assets/bi-quicker-logo.png. This marker exists only to verify the asset update.
