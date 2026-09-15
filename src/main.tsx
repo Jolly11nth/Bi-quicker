@@ -5,6 +5,7 @@ import { AutoRiderAssignment } from './components/AutoRiderAssignment'
 import '../styles.css'
 import './logo-overrides.css'
 import './commerce.css'
+import './dashboard-polish.css'
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
