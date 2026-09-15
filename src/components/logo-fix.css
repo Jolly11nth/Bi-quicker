@@ -1,0 +1,27 @@
+/* Ensure the supplied Bi-quicker wordmark is never cropped by the legacy square logo rules. */
+.logo-mark {
+  width: 170px !important;
+  height: auto !important;
+  max-width: 100%;
+  object-fit: contain !important;
+  border-radius: 0 !important;
+}
+.logo-small {
+  width: 145px !important;
+  height: auto !important;
+}
+.dashboard-sidebar .dash-brand img.logo-mark {
+  width: 120px !important;
+  height: auto !important;
+  max-width: 100%;
+}
+@media (max-width: 767px) {
+  .logo-mark {
+    width: 150px !important;
+    height: auto !important;
+  }
+  .logo-small {
+    width: 130px !important;
+    height: auto !important;
+  }
+}
