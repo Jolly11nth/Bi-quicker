@@ -1,16 +1,22 @@
 # Bi-quicker
 
-A responsive static recreation of the Bi-quicker role-selection and multi-role authentication UI, based on the supplied Figma Make design and reference screenshots.
+Bi-quicker is a React + TypeScript + Vite digital marketplace application for customers, store owners, delivery riders, and platform administrators.
 
-## Included
+## Current implementation
 
-- Role selection for Customer, Store Owner, Delivery Rider, and Super Admin
-- Responsive desktop/tablet/mobile layouts
-- Separate sign-in routes for each role
-- Sign-up flows for customer, store owner, and rider
-- Role-specific colors and icons
-- Password visibility toggle and demo-account fill interaction
-- Bi-quicker logo asset
+The first application slice recreates the supplied Figma role-selection and authentication experience as a real React application.
+
+- Role selection: Customer, Store Owner, Delivery Rider, Super Admin
+- Responsive desktop, tablet, and mobile layouts
+- Role-specific visual themes and icons
+- Customer, Store Admin, and Rider registration flows
+- Sign-in flows for all four roles
+- Form validation and error feedback
+- Demo-account sign-in flow
+- Password visibility control
+- Password-reset/support interaction
+- Terms of Service and Privacy Policy dialog
+- Client-side account/session persistence for development testing
 
 ## Routes
 
@@ -23,16 +29,35 @@ A responsive static recreation of the Bi-quicker role-selection and multi-role a
 - `#/rider/signup`
 - `#/super-admin/signin`
 
-## Run locally
+## Development
 
-Serve the folder with any static web server. For example:
+Requirements: Node.js 20+ recommended.
 
 ```bash
-python -m http.server 4173
+npm install
+npm run dev
 ```
 
-Then open `http://localhost:4173/`.
+Then open the Vite development URL shown in the terminal.
 
-## Notes
+## Validation
 
-This recreation is intentionally dependency-free so it can be previewed without installing a React toolchain. The original design source uses React, React Router, Lucide icons, and shadcn/ui-style components; the static implementation reproduces the visible authentication/landing experience without those runtime dependencies.
+```bash
+npm run typecheck
+npm run build
+npm run preview
+```
+
+## Architecture
+
+```text
+src/
+  components/   Reusable UI components
+  lib/          Roles, types, and development storage
+  pages/        Route-level React pages
+  assets/       Application assets
+  App.tsx       Lightweight route shell
+  main.tsx      React entry point
+```
+
+The current browser storage is intentionally a development-only authentication layer. Production authentication, API integration, payments, orders, delivery operations, and dashboards will be implemented as subsequent application slices rather than simulated in the UI.
