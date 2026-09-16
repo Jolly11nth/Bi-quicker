@@ -3,7 +3,7 @@ import { AuthHeader, AuthLayout } from '../components/AuthLayout'
 import { ArrowRightIcon } from '../components/Icons'
 import { Toast } from '../components/Toast'
 import { roles, signInPath } from '../lib/roles'
-import { findAccount, saveAccount } from '../lib/storage'
+import { signUpApi } from '../lib/api'
 import type { RoleKey } from '../lib/types'
 
 const fieldSets: Record<Exclude<RoleKey, 'admin'>, string[]> = {
@@ -17,10 +17,11 @@ export function SignUp({ role }: { role: Exclude<RoleKey, 'admin'> }) {
   const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(fields.map((field) => [field, ''])))
   const [agree, setAgree] = useState(false)
   const [toast, setToast] = useState<{ message: string; type?: 'success' | 'error' } | null>(null)
+  const [loading, setLoading] = useState(false)
 
   const update = (field: string, value: string) => setValues((current) => ({ ...current, [field]: value }))
 
-  const submit = (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault()
     const missing = fields.find((field) => !values[field]?.trim())
     if (missing) return setToast({ message: `Please complete: ${missing}.`, type: 'error' })
@@ -28,12 +29,19 @@ export function SignUp({ role }: { role: Exclude<RoleKey, 'admin'> }) {
     if (values.Password.length < 6) return setToast({ message: 'Password must be at least 6 characters.', type: 'error' })
     if (values.Password !== values['Confirm Password']) return setToast({ message: 'Passwords do not match.', type: 'error' })
     if (!agree) return setToast({ message: 'Please accept the Terms of Service and Privacy Policy.', type: 'error' })
-    if (findAccount(role, values.Email.trim())) return setToast({ message: 'An account with this email already exists for this role.', type: 'error' })
 
-    const name = values['Full Name'] || values['Owner Name'] || 'User'
-    saveAccount({ role, email: values.Email.trim().toLowerCase(), password: values.Password, name, data: values })
-    setToast({ message: 'Account created successfully. Redirecting to sign in…' })
-    window.setTimeout(() => { window.location.hash = signInPath(role) }, 900)
+    setLoading(true)
+    try {
+      const name = values['Full Name'] || values['Owner Name'] || 'User'
+      const data = Object.fromEntries(Object.entries(values).filter(([key]) => !['Password', 'Confirm Password'].includes(key)))
+      await signUpApi(role, values.Email.trim().toLowerCase(), values.Password, name, data)
+      setToast({ message: 'Account created successfully. Redirecting to sign in…' })
+      window.setTimeout(() => { window.location.hash = signInPath(role) }, 900)
+    } catch (error) {
+      setToast({ message: error instanceof Error ? error.message : 'Unable to create the account right now.', type: 'error' })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return <AuthLayout role={role}>
@@ -50,7 +58,7 @@ export function SignUp({ role }: { role: Exclude<RoleKey, 'admin'> }) {
         </div>
       })}
       <label className="check-row"><input type="checkbox" checked={agree} onChange={(event) => setAgree(event.target.checked)} /> <span>I agree to the Terms of Service and Privacy Policy</span></label>
-      <button className="primary" type="submit">Create Account <ArrowRightIcon /></button>
+      <button className="primary" type="submit" disabled={loading}>{loading ? 'Creating Account…' : <>Create Account <ArrowRightIcon /></>}</button>
       <div className="form-footer">Already have an account? <button type="button" onClick={() => { window.location.hash = signInPath(role) }}>Sign in</button></div>
     </form>
     {toast && <Toast {...toast} onClose={() => setToast(null)} />}
