@@ -3,7 +3,14 @@ export interface LocationCoordinates {
   longitude: number
 }
 
+export interface CachedRoute {
+  distanceKm: number
+  durationMinutes: number
+  calculatedAt: string
+}
+
 const LOCATION_PREFIX = 'bi-quicker:location:'
+const ROUTE_PREFIX = 'bi-quicker:route:'
 
 export const requestCurrentLocation = (): Promise<LocationCoordinates> => {
   if (!('geolocation' in navigator)) {
@@ -34,6 +41,20 @@ export const getSavedLocation = (key: string): LocationCoordinates | null => {
   try {
     const raw = localStorage.getItem(`${LOCATION_PREFIX}${key}`)
     return raw ? JSON.parse(raw) as LocationCoordinates : null
+  } catch {
+    return null
+  }
+}
+
+export const saveRoute = (customerEmail: string, vendorId: string, route: Omit<CachedRoute, 'calculatedAt'>) => {
+  const value: CachedRoute = { ...route, calculatedAt: new Date().toISOString() }
+  localStorage.setItem(`${ROUTE_PREFIX}${customerEmail.toLowerCase()}:${vendorId}`, JSON.stringify(value))
+}
+
+export const getSavedRoute = (customerEmail: string, vendorId: string): CachedRoute | null => {
+  try {
+    const raw = localStorage.getItem(`${ROUTE_PREFIX}${customerEmail.toLowerCase()}:${vendorId}`)
+    return raw ? JSON.parse(raw) as CachedRoute : null
   } catch {
     return null
   }
