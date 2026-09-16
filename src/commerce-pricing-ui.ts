@@ -1,4 +1,6 @@
-import { calculateMaintenanceFee, calculateRiderDeliveryFee, formatMoney } from './lib/commerce'
+import { calculateMaintenanceFee, calculateRiderDeliveryFee, formatMoney, getVendors } from './lib/commerce'
+import { getSavedRoute } from './lib/location'
+import { getSession } from './lib/storage'
 
 const parseMoney = (text: string) => Number(text.replace(/[^0-9.-]/g, '')) || 0
 
@@ -11,9 +13,10 @@ const updateCheckoutPricing = () => {
 
   const subtotal = parseMoney(subtotalRow.querySelector('strong')?.textContent || '')
   const maintenanceFee = calculateMaintenanceFee(subtotal)
-  const deliveryFee = calculateRiderDeliveryFee(30)
-  const total = subtotal + maintenanceFee + deliveryFee
-
+  const session = getSession()
+  const vendorName = card.querySelector('h2')?.textContent?.trim()
+  const vendor = vendorName ? getVendors().find((item) => item.name === vendorName) : undefined
+  const route = session?.email && vendor ? getSavedRoute(session.email, vendor.id) : null
   const rows = Array.from(card.querySelectorAll<HTMLElement>('.checkout-total'))
   const maintenanceRow = rows.find((row) => row.dataset.pricingRow === 'maintenance')
   const riderRow = rows.find((row) => row.dataset.pricingRow === 'rider')
@@ -28,25 +31,38 @@ const updateCheckoutPricing = () => {
     maintenanceRow.querySelector('strong')!.textContent = formatMoney(maintenanceFee)
   }
 
-  const deliveryLabel = `Rider delivery (≤30 min)`
-  if (!riderRow) {
-    const row = document.createElement('div')
-    row.className = 'checkout-total'
-    row.dataset.pricingRow = 'rider'
-    row.innerHTML = `<span>${deliveryLabel}</span><strong>${formatMoney(deliveryFee)}</strong>`
-    const currentDelivery = rows.find((item) => item.querySelector('span')?.textContent?.trim() === 'Delivery')
-    currentDelivery?.remove()
-    const latestMaintenance = card.querySelector<HTMLElement>('[data-pricing-row="maintenance"]')
-    latestMaintenance?.insertAdjacentElement('afterend', row)
-  } else {
-    riderRow.querySelector('span')!.textContent = deliveryLabel
-    riderRow.querySelector('strong')!.textContent = formatMoney(deliveryFee)
+  const currentDelivery = rows.find((item) => item.querySelector('span')?.textContent?.trim() === 'Delivery')
+  currentDelivery?.remove()
+
+  if (route) {
+    try {
+      const deliveryFee = calculateRiderDeliveryFee(route.distanceKm)
+      const deliveryLabel = `Rider delivery (${route.distanceKm.toFixed(1)} km · ${Math.round(route.durationMinutes)} min)`
+      const row = riderRow || document.createElement('div')
+      row.className = 'checkout-total'
+      row.dataset.pricingRow = 'rider'
+      row.innerHTML = `<span>${deliveryLabel}</span><strong>${formatMoney(deliveryFee)}</strong>`
+      if (!riderRow) subtotalRow.parentElement?.querySelector('[data-pricing-row="maintenance"]')?.insertAdjacentElement('afterend', row)
+      const grand = card.querySelector<HTMLElement>('.checkout-total.grand')
+      if (grand) {
+        grand.querySelector('span')!.textContent = 'Total payable'
+        grand.querySelector('strong')!.textContent = formatMoney(subtotal + maintenanceFee + deliveryFee)
+      }
+    } catch {
+      if (riderRow) riderRow.remove()
+      const grand = card.querySelector<HTMLElement>('.checkout-total.grand')
+      if (grand) {
+        grand.querySelector('span')!.textContent = 'Total payable'
+        grand.querySelector('strong')!.textContent = 'Distance pricing unavailable'
+      }
+    }
+    return
   }
 
   const grand = card.querySelector<HTMLElement>('.checkout-total.grand')
   if (grand) {
     grand.querySelector('span')!.textContent = 'Total payable'
-    grand.querySelector('strong')!.textContent = formatMoney(total)
+    grand.querySelector('strong')!.textContent = 'Waiting for location'
   }
 }
 
@@ -57,8 +73,5 @@ const startPricingObserver = () => {
   return () => observer.disconnect()
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', startPricingObserver, { once: true })
-} else {
-  startPricingObserver()
-}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startPricingObserver, { once: true })
+else startPricingObserver()
