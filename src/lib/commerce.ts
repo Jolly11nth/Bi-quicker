@@ -66,6 +66,8 @@ export interface CommerceOrder {
   items: OrderItem[]
   subtotal: number
   maintenanceFee: number
+  maintenanceRate: number
+  deliveryDistanceKm: number
   deliveryMinutes: number
   deliveryFee: number
   total: number
@@ -89,8 +91,9 @@ export interface CommerceOrder {
 const VENDORS_KEY = 'bi-quicker:vendors'
 const ORDERS_KEY = 'bi-quicker:commerce-orders'
 
-const MAINTENANCE_RATE = 0.03
-const RIDER_FEE_PER_30_MINUTES = 500
+export const MAINTENANCE_RATE = 0.03
+export const RIDER_BASE_DISTANCE_KM = 5
+export const RIDER_BASE_FEE = 500
 
 const seedVendors: Vendor[] = [
   {
@@ -175,16 +178,20 @@ const now = () => new Date().toISOString()
 const money = (value: number) => `₦${value.toLocaleString('en-NG')}`
 
 /**
- * Rider payment is distance/time based. Every 30-minute delivery block costs ₦500.
- * A delivery of 30 minutes or less therefore costs ₦500; longer deliveries are
- * charged in additional 30-minute blocks.
+ * Confirmed rider pricing rule: 0–5 km costs ₦500.
+ * Additional distance brackets are intentionally not invented here; they can be
+ * added to this function when the business pricing schedule is approved.
  */
-export const calculateRiderDeliveryFee = (deliveryMinutes: number) => {
-  const minutes = Math.max(1, Math.ceil(deliveryMinutes))
-  return Math.ceil(minutes / 30) * RIDER_FEE_PER_30_MINUTES
+export const calculateRiderDeliveryFee = (distanceKm: number) => {
+  const distance = Math.max(0, distanceKm)
+  if (distance <= RIDER_BASE_DISTANCE_KM) return RIDER_BASE_FEE
+  throw new Error('Rider pricing for deliveries above 5 km has not been configured yet.')
 }
 
-export const calculateMaintenanceFee = (subtotal: number) => Math.round(subtotal * MAINTENANCE_RATE)
+export const calculateMaintenanceFee = (subtotal: number) => Math.round(Math.max(0, subtotal) * MAINTENANCE_RATE)
+
+export const calculateOrderTotal = (subtotal: number, deliveryFee: number) =>
+  Math.max(0, subtotal) + calculateMaintenanceFee(subtotal) + Math.max(0, deliveryFee)
 
 const buildTracking = (): TrackingEvent[] => [
   { id: 'placed', status: 'Awaiting payment', label: 'Order placed', detail: 'Order created and waiting for payment confirmation.', at: now(), done: true },
@@ -201,12 +208,14 @@ export const createOrder = (input: {
   customerName: string
   vendor: Vendor
   items: OrderItem[]
+  deliveryDistanceKm?: number
   deliveryMinutes?: number
 }) => {
   const subtotal = input.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const maintenanceFee = calculateMaintenanceFee(subtotal)
+  const deliveryDistanceKm = input.deliveryDistanceKm ?? RIDER_BASE_DISTANCE_KM
+  const deliveryFee = calculateRiderDeliveryFee(deliveryDistanceKm)
   const deliveryMinutes = input.deliveryMinutes ?? 30
-  const deliveryFee = calculateRiderDeliveryFee(deliveryMinutes)
   const id = `BQ-${Date.now().toString().slice(-7)}`
   const createdAt = now()
   const order: CommerceOrder = {
@@ -219,9 +228,11 @@ export const createOrder = (input: {
     items: input.items,
     subtotal,
     maintenanceFee,
+    maintenanceRate: MAINTENANCE_RATE,
+    deliveryDistanceKm,
     deliveryMinutes,
     deliveryFee,
-    total: subtotal + maintenanceFee + deliveryFee,
+    total: calculateOrderTotal(subtotal, deliveryFee),
     status: 'Awaiting payment',
     createdAt,
     payment: {
@@ -237,7 +248,7 @@ export const createOrder = (input: {
     ],
     messages: [{
       id: `${id}-system`, senderRole: 'system', senderEmail: 'system', senderName: 'Bi-quicker',
-      body: `Order ${id} created. Vendor payment details are available above.`, at: createdAt, system: true,
+      body: `Order ${id} created. Vendor payment details are available above the chat.`, at: createdAt, system: true,
     }],
     tracking: buildTracking(),
   }
