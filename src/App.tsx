@@ -44,8 +44,8 @@ export default function App() {
 
   if (route.type === 'home') return <RoleSelection />
   if (route.type === 'admin-chats') return <AdminChatOverview />
-  if (route.type === 'commerce') return <><OrderCenter role={route.role} mode={route.mode} orderId={route.orderId} />{route.role === 'customer' && route.mode === 'shop' && <CustomerLocationPermission />}</>
-  if (route.type === 'dashboard') return <><Dashboard role={route.role} />{route.role === 'store' && <StoreLocationPermission />}</>
+  if (route.type === 'commerce') return <><OrderCenter role={route.role} mode={route.mode} orderId={route.orderId} /></>
+  if (route.type === 'dashboard') return <><Dashboard role={route.role} />{route.role === 'store' && <StoreLocationPermission />}{route.role === 'customer' && <CustomerLocationPermission />}</>
   if (route.type === 'signup' && route.role !== 'admin') return <SignUp role={route.role as Exclude<RoleKey, 'admin'>} />
   return <SignIn role={route.role} />
 }
