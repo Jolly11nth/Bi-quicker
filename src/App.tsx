@@ -5,6 +5,7 @@ import { SignUp } from './pages/SignUp'
 import { Dashboard } from './pages/Dashboard'
 import { AdminChatOverview, OrderCenter } from './pages/OrderCenterV2'
 import { roleFromSegment } from './lib/roles'
+import { getSession } from './lib/storage'
 import type { RoleKey } from './lib/types'
 
 type CommerceMode = 'shop' | 'list' | 'order'
@@ -23,8 +24,9 @@ function parseRoute(): Route {
     if (path === '/super-admin/chats') return { type: 'admin-chats' }
     return { type: 'home' }
   }
-  const role = roleFromSegment(match[1])!
+  const requestedRole = roleFromSegment(match[1])!
   const segment = match[2]
+  const role = segment.startsWith('order/') ? (getSession()?.role || requestedRole) : requestedRole
   if (segment === 'shop') return { type: 'commerce', role, mode: 'shop' }
   if (segment === 'orders') return { type: 'commerce', role, mode: 'list' }
   if (segment.startsWith('order/')) return { type: 'commerce', role, mode: 'order', orderId: match[3] }
