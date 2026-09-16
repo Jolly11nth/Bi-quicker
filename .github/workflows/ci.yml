@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  build:
+  frontend:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -22,3 +22,21 @@ jobs:
         run: npm run typecheck
       - name: Production build
         run: npm run build
+
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install backend dependencies
+        run: pip install -r backend/requirements.txt
+      - name: Compile backend
+        run: python -m compileall -q backend/app
+      - name: Initialize development database
+        run: python -m backend.app.init_db
+        env:
+          DATABASE_URL: sqlite:///./bi_quicker_ci.db
