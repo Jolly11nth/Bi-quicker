@@ -65,6 +65,8 @@ export interface CommerceOrder {
   vendorOwnerEmail: string
   items: OrderItem[]
   subtotal: number
+  maintenanceFee: number
+  deliveryMinutes: number
   deliveryFee: number
   total: number
   status: OrderStatus
@@ -86,6 +88,9 @@ export interface CommerceOrder {
 
 const VENDORS_KEY = 'bi-quicker:vendors'
 const ORDERS_KEY = 'bi-quicker:commerce-orders'
+
+const MAINTENANCE_RATE = 0.03
+const RIDER_FEE_PER_30_MINUTES = 500
 
 const seedVendors: Vendor[] = [
   {
@@ -169,6 +174,18 @@ export const getOrder = (id: string) => getOrders().find((order) => order.id ===
 const now = () => new Date().toISOString()
 const money = (value: number) => `₦${value.toLocaleString('en-NG')}`
 
+/**
+ * Rider payment is distance/time based. Every 30-minute delivery block costs ₦500.
+ * A delivery of 30 minutes or less therefore costs ₦500; longer deliveries are
+ * charged in additional 30-minute blocks.
+ */
+export const calculateRiderDeliveryFee = (deliveryMinutes: number) => {
+  const minutes = Math.max(1, Math.ceil(deliveryMinutes))
+  return Math.ceil(minutes / 30) * RIDER_FEE_PER_30_MINUTES
+}
+
+export const calculateMaintenanceFee = (subtotal: number) => Math.round(subtotal * MAINTENANCE_RATE)
+
 const buildTracking = (): TrackingEvent[] => [
   { id: 'placed', status: 'Awaiting payment', label: 'Order placed', detail: 'Order created and waiting for payment confirmation.', at: now(), done: true },
   { id: 'paid', status: 'Paid', label: 'Payment confirmed', detail: 'Payment details have been shared with the vendor.', at: '', done: false },
@@ -184,9 +201,12 @@ export const createOrder = (input: {
   customerName: string
   vendor: Vendor
   items: OrderItem[]
+  deliveryMinutes?: number
 }) => {
   const subtotal = input.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const deliveryFee = 1800
+  const maintenanceFee = calculateMaintenanceFee(subtotal)
+  const deliveryMinutes = input.deliveryMinutes ?? 30
+  const deliveryFee = calculateRiderDeliveryFee(deliveryMinutes)
   const id = `BQ-${Date.now().toString().slice(-7)}`
   const createdAt = now()
   const order: CommerceOrder = {
@@ -198,8 +218,10 @@ export const createOrder = (input: {
     vendorOwnerEmail: input.vendor.ownerEmail,
     items: input.items,
     subtotal,
+    maintenanceFee,
+    deliveryMinutes,
     deliveryFee,
-    total: subtotal + deliveryFee,
+    total: subtotal + maintenanceFee + deliveryFee,
     status: 'Awaiting payment',
     createdAt,
     payment: {
