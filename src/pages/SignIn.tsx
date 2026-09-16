@@ -3,7 +3,8 @@ import { AuthHeader, AuthLayout } from '../components/AuthLayout'
 import { ArrowRightIcon, EyeIcon, EyeOffIcon, LockIcon, MailIcon } from '../components/Icons'
 import { Toast } from '../components/Toast'
 import { roles, segmentFromRole, signUpPath } from '../lib/roles'
-import { findAccount, saveSession } from '../lib/storage'
+import { saveSession } from '../lib/storage'
+import { signInApi } from '../lib/api'
 import type { RoleKey } from '../lib/types'
 
 export function SignIn({ role }: { role: RoleKey }) {
@@ -14,22 +15,26 @@ export function SignIn({ role }: { role: RoleKey }) {
   const [toast, setToast] = useState<{ message: string; type?: 'success' | 'error' } | null>(null)
   const [resetMode, setResetMode] = useState(false)
   const [resetEmail, setResetEmail] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const submit = (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault()
     const normalized = email.trim().toLowerCase()
     if (!normalized || !password) return setToast({ message: 'Please fill in all fields.', type: 'error' })
     if (!/^\S+@\S+\.\S+$/.test(normalized)) return setToast({ message: 'Please enter a valid email address.', type: 'error' })
 
-    const account = findAccount(role, normalized)
-    const isDemo = normalized === config.demoEmail && password === 'demo123'
-    if (!isDemo && (!account || account.password !== password)) {
-      return setToast({ message: 'Invalid email or password. Use the demo account or create an account first.', type: 'error' })
+    setLoading(true)
+    try {
+      const result = await signInApi(role, normalized, password)
+      localStorage.setItem('bi-quicker:token', result.token)
+      saveSession(result.session)
+      setToast({ message: 'Welcome back! Opening your dashboard...' })
+      window.setTimeout(() => { window.location.hash = `/${segmentFromRole(role)}/dashboard` }, 450)
+    } catch (error) {
+      setToast({ message: error instanceof Error ? error.message : 'Unable to sign in right now.', type: 'error' })
+    } finally {
+      setLoading(false)
     }
-
-    saveSession({ role, email: normalized, name: account?.name || (role === 'admin' ? 'Super Admin' : 'Demo User') })
-    setToast({ message: 'Welcome back! Opening your dashboard...' })
-    window.setTimeout(() => { window.location.hash = `/${segmentFromRole(role)}/dashboard` }, 450)
   }
 
   const fillDemo = () => {
@@ -62,9 +67,9 @@ export function SignIn({ role }: { role: RoleKey }) {
         <div className="input-wrap"><LockIcon /><input id="password" type={show ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="••••••••" autoComplete="current-password" /><button className="eye" type="button" onClick={() => setShow((value) => !value)} aria-label={show ? 'Hide password' : 'Show password'}>{show ? <EyeOffIcon /> : <EyeIcon />}</button></div>
       </div>
       {config.security && <div className="security-note"><span className="security-icon">◆</span><span>This is a restricted area. All access attempts are logged and monitored.</span></div>}
-      <button className="primary" type="submit">Sign In <ArrowRightIcon /></button>
+      <button className="primary" type="submit" disabled={loading}>{loading ? 'Signing In…' : <>Sign In <ArrowRightIcon /></>}</button>
       <div className="divider">Quick Demo</div>
-      <button className="demo" type="button" onClick={fillDemo}>Sign in with Demo Account</button>
+      <button className="demo" type="button" onClick={fillDemo} disabled={loading}>Sign in with Demo Account</button>
       {config.footer
         ? <div className="form-footer">{config.footer} <button type="button" onClick={() => { window.location.hash = signUpPath(role) }}>{config.signup}</button></div>
         : <div className="form-footer admin-note">Admin accounts are created by system administrators only.<br />Contact your IT department for access issues.</div>}
