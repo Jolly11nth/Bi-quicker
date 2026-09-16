@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getVendors } from '../lib/commerce'
 import { getRoadRoute } from '../lib/routing'
-import { customerLocationKey, getSavedLocation, requestCurrentLocation, saveLocation, vendorLocationKey } from '../lib/location'
+import { customerLocationKey, getSavedLocation, requestCurrentLocation, saveLocation, saveRoute, vendorLocationKey } from '../lib/location'
 import { getSession } from '../lib/storage'
 
 /** Requests the customer's browser location and prepares route estimates for vendors whose locations are available. */
@@ -44,10 +44,7 @@ export function CustomerLocationPermission() {
         if (!vendorLocation) continue
         try {
           const route = await getRoadRoute(customer, vendorLocation)
-          saveLocation(`route:${session.email.toLowerCase()}:${vendor.id}`, {
-            latitude: route.distanceKm,
-            longitude: route.durationMinutes,
-          })
+          saveRoute(session.email, vendor.id, route)
         } catch {
           // A route can fail for a particular vendor without blocking the marketplace.
         }
