@@ -152,6 +152,17 @@ export const getVendors = (): Vendor[] => {
 
 export const getRiders = () => riders
 
+export const addVendorProduct = (vendorId: string, input: Omit<VendorProduct, 'id'>) => {
+  const vendors = getVendors()
+  const index = vendors.findIndex((vendor) => vendor.id === vendorId)
+  if (index < 0) return null
+  const product: VendorProduct = { ...input, id: `${vendorId}-p-${Date.now()}` }
+  const vendor = { ...vendors[index], products: [...vendors[index].products, product] }
+  vendors[index] = vendor
+  write(VENDORS_KEY, vendors)
+  return product
+}
+
 export const getOrders = (): CommerceOrder[] => read<CommerceOrder[]>(ORDERS_KEY, [])
 export const getOrder = (id: string) => getOrders().find((order) => order.id === id)
 
