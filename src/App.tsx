@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { StoreLocationPermission } from './components/LocationPermission'
+import { CustomerLocationPermission } from './components/CustomerLocationPermission'
 import { RoleSelection } from './pages/RoleSelection'
 import { SignIn } from './pages/SignIn'
 import { SignUp } from './pages/SignUp'
@@ -10,7 +11,6 @@ import { getSession } from './lib/storage'
 import type { RoleKey } from './lib/types'
 
 type CommerceMode = 'shop' | 'list' | 'order'
-
 type Route =
   | { type: 'home' }
   | { type: 'signin' | 'signup' | 'dashboard'; role: RoleKey }
@@ -44,7 +44,7 @@ export default function App() {
 
   if (route.type === 'home') return <RoleSelection />
   if (route.type === 'admin-chats') return <AdminChatOverview />
-  if (route.type === 'commerce') return <OrderCenter role={route.role} mode={route.mode} orderId={route.orderId} />
+  if (route.type === 'commerce') return <><OrderCenter role={route.role} mode={route.mode} orderId={route.orderId} />{route.role === 'customer' && route.mode === 'shop' && <CustomerLocationPermission />}</>
   if (route.type === 'dashboard') return <><Dashboard role={route.role} />{route.role === 'store' && <StoreLocationPermission />}</>
   if (route.type === 'signup' && route.role !== 'admin') return <SignUp role={route.role as Exclude<RoleKey, 'admin'>} />
   return <SignIn role={route.role} />
