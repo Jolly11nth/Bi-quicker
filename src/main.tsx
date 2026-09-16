@@ -7,6 +7,7 @@ import './logo-overrides.css'
 import './commerce.css'
 import './dashboard-polish.css'
 import './dashboard-shell.css'
+import './dashboard-content.css'
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
