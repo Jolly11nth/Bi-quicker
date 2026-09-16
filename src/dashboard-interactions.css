@@ -1,0 +1,29 @@
+/* Functional dashboard states and interaction polish. Loaded after dashboard content styles. */
+.dashboard-page .table-wrap tr.is-clickable { cursor: pointer; }
+.dashboard-page .table-wrap tr.is-clickable td:first-child { color: var(--dash-accent); font-weight: 750; }
+.dashboard-page .table-wrap tr.is-clickable:hover td { background: color-mix(in srgb, var(--dash-accent) 4%, white); }
+.dashboard-page .table-wrap tr.is-clickable:focus-within td { outline: 2px solid color-mix(in srgb, var(--dash-accent) 28%, transparent); outline-offset: -2px; }
+.dashboard-page .table-secondary { display: block; margin-top: 3px; color: #8a94a6; font-size: 10px; font-weight: 500; }
+.dashboard-page .table-empty { padding: 28px 20px; text-align: center; color: #718096; font-size: 12px; border-top: 1px solid #edf1f5; }
+.dashboard-page .table-empty button { border: 0; background: transparent; color: var(--dash-accent); font-weight: 800; cursor: pointer; }
+.dashboard-page .empty-delivery-action { margin-top: 14px; }
+.dashboard-page .empty-delivery-action .hero-primary { min-height: 40px; }
+.dashboard-page .inventory-ok { display: flex !important; flex-direction: column; grid-template-columns: none !important; gap: 4px !important; min-height: 74px; justify-content: center; }
+.dashboard-page .inventory-ok span { color: #64748b; }
+.dashboard-page .status.active { background: #dcfce7; color: #15803d; }
+.dashboard-page .status.out-of-stock { background: #fee2e2; color: #b91c1c; }
+.dashboard-page .empty-friendly .commerce-primary { margin-top: 18px; min-height: 42px; padding: 0 16px; border: 0; border-radius: 10px; font-weight: 800; cursor: pointer; }
+.dashboard-page .profile-button:focus-visible,
+.dashboard-page .menu-button:focus-visible,
+.dashboard-page .dashboard-sidebar button:focus-visible,
+.dashboard-page .hero-primary:focus-visible,
+.dashboard-page .hero-secondary:focus-visible,
+.dashboard-page .category-card:focus-visible,
+.dashboard-page .customer-actions button:focus-visible,
+.dashboard-page .section-heading button:focus-visible,
+.dashboard-page .panel-head button:focus-visible { outline: 3px solid color-mix(in srgb, var(--dash-accent) 25%, transparent); outline-offset: 2px; }
+.dashboard-page .dash-search input:focus-visible { outline: none; }
+@media (max-width: 760px) {
+  .dashboard-page .table-empty { padding: 24px 14px; }
+  .dashboard-page .empty-delivery-action .hero-primary { width: auto; }
+}
