@@ -10,6 +10,7 @@ import './dashboard-shell.css'
 import './dashboard-content.css'
 import './dashboard-interactions.css'
 import './dashboard-logo-fix.css'
+import './commerce-pricing-ui'
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
