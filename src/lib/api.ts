@@ -43,3 +43,6 @@ export const saveLocationApi = (location: Omit<ApiLocation, 'email' | 'role'>, e
     method: 'POST',
     body: JSON.stringify({ ...location, email, role }),
   })
+
+export const getLocationApi = (role: RoleKey, email: string) =>
+  request<ApiLocation>(`/api/locations/${role}/${encodeURIComponent(email)}`)
