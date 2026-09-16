@@ -1,5 +1,8 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from sqlalchemy import text
 from .database import engine
 
@@ -22,3 +25,12 @@ def database_health() -> dict[str, str]:
     with engine.connect() as connection:
         connection.execute(text("SELECT 1"))
     return {"status": "ok", "database": "connected"}
+
+STATIC_DIR = Path(__file__).parent / "static"
+
+@app.get("/{path:path}")
+def frontend(path: str):
+    requested = STATIC_DIR / path
+    if path and requested.is_file():
+        return FileResponse(requested)
+    return FileResponse(STATIC_DIR / "index.html")
