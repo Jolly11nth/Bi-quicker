@@ -1,58 +1,51 @@
 import { useEffect, useState } from 'react'
-import { getSavedLocation, requestCurrentLocation, saveLocation, vendorLocationKey } from '../lib/location'
+import { requestCurrentLocation } from '../lib/location'
+import { saveLocationApi } from '../lib/api'
 import { getSession } from '../lib/storage'
+import type { RoleKey } from '../lib/types'
 
-/** Requests the store owner's browser location while they are signed in as a store admin. */
-export function StoreLocationPermission() {
+export function LocationPermission({ role }: { role: 'customer' | 'store' }) {
   const session = getSession()
   const [state, setState] = useState<'idle' | 'requesting' | 'saved' | 'error'>('idle')
   const [message, setMessage] = useState('')
 
-  useEffect(() => {
-    if (!session?.email) return
-    const key = vendorLocationKey(session.email)
-    if (getSavedLocation(key)) {
-      setState('saved')
-      return
-    }
+  const request = async () => {
+    if (!session?.email || session.role !== role) return
     setState('requesting')
-    requestCurrentLocation()
-      .then((location) => {
-        saveLocation(key, location)
-        setState('saved')
-      })
-      .catch((error: Error) => {
-        setMessage(error.message)
-        setState('error')
-      })
-  }, [session?.email])
+    try {
+      const location = await requestCurrentLocation()
+      await saveLocationApi(location, session.email, role)
+      setState('saved')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Unable to save your location.')
+      setState('error')
+    }
+  }
 
-  if (state === 'idle' || state === 'requesting' || state === 'saved') return null
+  useEffect(() => {
+    void request()
+    // Request once for this signed-in account/role. The browser controls permission prompts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.email, role])
 
+  if (!session?.email || session.role !== role || state === 'idle' || state === 'requesting' || state === 'saved') return null
+
+  const label = role === 'store' ? 'Store location' : 'Delivery location'
   return (
     <div className="location-permission-banner" role="status">
       <div>
-        <strong>Store location needed</strong>
+        <strong>{label} needed</strong>
         <p>{message}</p>
       </div>
-      <button
-        type="button"
-        onClick={() => {
-          if (!session?.email) return
-          setState('requesting')
-          requestCurrentLocation()
-            .then((location) => {
-              saveLocation(vendorLocationKey(session.email), location)
-              setState('saved')
-            })
-            .catch((error: Error) => {
-              setMessage(error.message)
-              setState('error')
-            })
-        }}
-      >
-        Allow location
-      </button>
+      <button type="button" onClick={() => void request()}>Allow location</button>
     </div>
   )
+}
+
+export function StoreLocationPermission() {
+  return <LocationPermission role="store" />
+}
+
+export function CustomerLocationPermission() {
+  return <LocationPermission role="customer" />
 }
