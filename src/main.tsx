@@ -8,6 +8,7 @@ import './commerce.css'
 import './dashboard-polish.css'
 import './dashboard-shell.css'
 import './dashboard-content.css'
+import './dashboard-interactions.css'
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
