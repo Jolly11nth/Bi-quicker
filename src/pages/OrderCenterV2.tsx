@@ -75,7 +75,7 @@ function PaymentPanel({ order, onRefresh }: { order: ApiOrder; onRefresh: (order
 }
 
 function Tracking({ order }: { order: ApiOrder }) {
-  return <section className="tracking-card"><div className="section-title"><div><span className="commerce-kicker">Package tracking</span><h2>{order.status}</h2></div><span className="tracking-id">{order.id}</span></div><div className="tracking-line">{order.tracking.map((event) => <div className={`tracking-step ${event.done ? 'done' : ''}`} key={String(event.id)}><span className="tracking-dot">{event.done ? '✓' : ''}</span><div><strong>{String(event.label)}</strong><p>{String(event.detail)}</p>{event.at && <small>{new Date(String(event.at)).toLocaleString()}</small>}</div></div>)}</div></section>
+  return <section className="tracking-card"><div className="section-title"><div><span className="commerce-kicker">Package tracking</span><h2>{order.status}</h2></div><span className="tracking-id">{order.id}</span></div><div className="tracking-line">{order.tracking.map((event) => <div className={`tracking-step ${event.done ? 'done' : ''}`} key={String(event.id)}><span className="tracking-dot">{event.done ? '✓' : ''}</span><div><strong>{String(event.label)}</strong><p>{String(event.detail)}</p>{event.at != null && <small>{new Date(String(event.at)).toLocaleString()}</small>}</div></div>)}</div></section>
 }
 
 function Chat({ order, role, onRefresh }: { order: ApiOrder; role: CommerceRole; onRefresh: () => void }) {
@@ -111,14 +111,28 @@ export function OrderCenter({ role, mode, orderId }: { role: RoleKey; mode: Comm
   const [vendor, setVendor] = useState<ApiVendor | null>(null)
   const [items, setItems] = useState<Array<{ productId: string; name: string; price: number; quantity: number }>>([])
   const [busy, setBusy] = useState(false); const [error, setError] = useState('')
-  if (mode === 'order' && orderId) return <OrderDetail orderId={orderId} role={commerceRole} onBack={() => go(`/${role === 'store' ? 'store-admin' : role === 'rider' ? 'rider' : role === 'admin' ? 'super-admin' : 'customer'}/orders`)} />
-  if (mode === 'list') return <OrderList role={commerceRole} onOpen={(id) => go(`/${role === 'store' ? 'store-admin' : role === 'rider' ? 'rider' : role === 'admin' ? 'super-admin' : 'customer'}/order/${id}`)} />
-  if (!vendor) return <><Header title="Stores" subtitle="Choose a store and shop from one vendor." /><VendorList onSelect={setVendor} /></>
-  if (!items.length) return <VendorShop vendor={vendor} onCheckout={setItems} onBack={() => setVendor(null)} />
-  const create = async () => { setBusy(true); setError(''); try { const order = await createOrderApi(vendor.id, items.map((item) => ({ productId: item.productId, quantity: item.quantity }))); go(`/${role === 'customer' ? 'customer' : role === 'store' ? 'store-admin' : role === 'rider' ? 'rider' : 'super-admin'}/order/${order.id}`) } catch (e) { setError(e instanceof Error ? e.message : 'Unable to create order.') } finally { setBusy(false) } }
+  if (mode === 'order' && orderId) return <OrderDetail orderId={orderId} role={commerceRole} onBack={() => go(`/${role === 'store' ? 'store-admin' : role === 'admin' ? 'super-admin' : role}/orders`)} />
+  if (mode === 'list') return <OrderList role={commerceRole} onOpen={(id) => go(`/${role === 'store' ? 'store-admin' : role === 'admin' ? 'super-admin' : role}/order/${id}`)} />
+  if (mode === 'shop' && !vendor) return <VendorList onSelect={(selected) => { setVendor(selected); setItems([]) }} />
+  if (mode === 'shop' && vendor && !items.length) return <VendorShop vendor={vendor} onCheckout={setItems} onBack={() => setVendor(null)} />
+  if (!vendor) return <Loading text="Preparing checkout…" />
+  const create = async () => {
+    if (!items.length) return
+    setBusy(true); setError('')
+    try {
+      const created = await createOrderApi(vendor.id, items.map((item) => ({ productId: item.productId, quantity: item.quantity })))
+      go(`/${role === 'store' ? 'store-admin' : role === 'admin' ? 'super-admin' : role}/order/${created.id}`)
+    } catch (e) { setError(e instanceof Error ? e.message : 'Unable to create order.') }
+    finally { setBusy(false) }
+  }
   return <Checkout vendor={vendor} items={items} onCreate={() => void create()} onBack={() => setItems([])} busy={busy} error={error} />
 }
 
 export function AdminChatOverview() {
-  return <OrderList role="admin" onOpen={(id) => go(`/super-admin/order/${id}`)} />
+  const [orders, setOrders] = useState<ApiOrder[]>([])
+  const [error, setError] = useState('')
+  useEffect(() => { void getOrdersApi().then(setOrders).catch((e) => setError(e instanceof Error ? e.message : 'Unable to load platform orders.')) }, [])
+  const active = useMemo(() => orders.filter((o) => o.messages.length > 0 || o.status !== 'Delivered'), [orders])
+  if (error) return <ErrorBox message={error} />
+  return <><Header title="Super Admin conversations" subtitle="Platform-wide order conversations and operational oversight." /><main className="commerce-main"><div className="order-list">{active.map((order) => <button className="order-list-card" key={order.id} onClick={() => go(`/super-admin/order/${order.id}`)}><div><span className="tracking-id">{order.id}</span><h3>{order.vendorName}</h3><p>{order.messages.length} messages · {order.status}</p></div><span>→</span></button>)}{!active.length && <div className="empty-commerce">No active conversations.</div>}</div></main></>
 }
