@@ -1,3 +1,6 @@
+import { Capacitor } from '@capacitor/core'
+import { Geolocation } from '@capacitor/geolocation'
+
 export interface LocationCoordinates {
   latitude: number
   longitude: number
@@ -12,7 +15,7 @@ export interface CachedRoute {
 const LOCATION_PREFIX = 'bi-quicker:location:'
 const ROUTE_PREFIX = 'bi-quicker:route:'
 
-export const requestCurrentLocation = (): Promise<LocationCoordinates> => {
+const requestBrowserLocation = (): Promise<LocationCoordinates> => {
   if (!('geolocation' in navigator)) {
     return Promise.reject(new Error('Location services are not available in this browser.'))
   }
@@ -31,6 +34,39 @@ export const requestCurrentLocation = (): Promise<LocationCoordinates> => {
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
     )
   })
+}
+
+export const requestCurrentLocation = async (): Promise<LocationCoordinates> => {
+  if (!Capacitor.isNativePlatform()) {
+    return requestBrowserLocation()
+  }
+
+  try {
+    const permission = await Geolocation.checkPermissions()
+    if (permission.location !== 'granted') {
+      const requested = await Geolocation.requestPermissions()
+      if (requested.location !== 'granted') {
+        throw new Error('Location access was denied. Please allow location access to continue.')
+      }
+    }
+
+    const position = await Geolocation.getCurrentPosition({
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 60000,
+    })
+
+    return {
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('Location access was denied')) {
+      throw error
+    }
+
+    throw new Error('Your location could not be determined. Please check device location services and try again.')
+  }
 }
 
 export const saveLocation = (key: string, location: LocationCoordinates) => {
