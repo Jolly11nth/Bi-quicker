@@ -7,7 +7,9 @@ import secrets
 import time
 
 
-SESSION_SECRET = os.environ.get("SESSION_SECRET", "change-me-in-railway")
+SESSION_SECRET = os.environ.get("SESSION_SECRET", "").strip()
+if len(SESSION_SECRET) < 32:
+    raise RuntimeError("SESSION_SECRET must be configured with at least 32 characters")
 
 
 def hash_password(password: str) -> str:
