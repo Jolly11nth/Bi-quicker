@@ -15,7 +15,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - name: Install dependencies
         run: npm install
       - name: Typecheck
@@ -40,4 +40,4 @@ jobs:
         run: python -m backend.app.init_db
         env:
           DATABASE_URL: sqlite:///./bi_quicker_ci.db
-          SESSION_SECRET: ci-only-session-secret-please-do-not-use-in-production-32
+          SESSION_SECRET: ci-only-bi-quicker-session-secret-32-chars-min
