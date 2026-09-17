@@ -1,12 +1,14 @@
+import hashlib
+import hmac
 import json
 import os
 import secrets
 from pathlib import Path
 
 import httpx
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -31,8 +33,9 @@ Base.metadata.create_all(bind=engine)
 with Session(engine) as _db:
     seed_vendors(_db)
 
-app = FastAPI(title="Bi-quicker API", version="1.1.0")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=False, allow_methods=["*"], allow_headers=["*"])
+app = FastAPI(title="Bi-quicker API", version="1.2.0")
+CORS_ORIGINS = [origin.strip() for origin in os.environ.get("CORS_ORIGINS", "").split(",") if origin.strip()]
+app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_credentials=False, allow_methods=["*"], allow_headers=["*"])
 
 class AuthPayload(BaseModel):
     email: str
@@ -90,6 +93,24 @@ def route_between(db: Session, customer_email: str, vendor_owner_email: str) -> 
 def tracking_events(created_at: str) -> list[dict]:
     labels = [("placed", "Awaiting payment", "Order placed", "Order created and waiting for payment confirmation."), ("paid", "Paid", "Payment confirmed", "Payment has been verified by the payment gateway."), ("preparing", "Preparing", "Vendor preparing order", "The vendor is preparing your package."), ("assigned", "Rider assigned", "Rider assigned", "A delivery rider has joined the order."), ("pickup", "Picked up", "Package picked up", "The rider has collected the package."), ("transit", "In transit", "In transit", "Package is moving toward the customer."), ("delivered", "Delivered", "Delivered", "Package delivered successfully.")]
     return [{"id": key, "status": status, "label": label, "detail": detail, "at": created_at if key == "placed" else "", "done": key == "placed"} for key, status, label, detail in labels]
+
+def mark_payment_success(row: OrderRecord, gateway_data: dict) -> None:
+    payment = load(row.payment_json, {})
+    if payment.get("confirmed"):
+        return
+    expected_reference = str(payment.get("reference", ""))
+    if gateway_data.get("reference") != expected_reference:
+        return
+    if gateway_data.get("status") != "success" or int(gateway_data.get("amount", 0)) != round(row.total * 100) or gateway_data.get("currency") != "NGN":
+        return
+    payment.update({"status": "success", "confirmed": True, "verifiedAt": utcnow(), "gatewayTransactionId": gateway_data.get("id")})
+    row.payment_json = dump(payment)
+    if row.status == "Awaiting payment":
+        row.status = "Paid"
+    tracking = load(row.tracking_json, [])
+    if isinstance(tracking, list) and len(tracking) > 1:
+        tracking[1]["done"], tracking[1]["at"] = True, payment["verifiedAt"]
+        row.tracking_json = dump(tracking)
 
 @app.get("/health")
 def health() -> dict[str, str]: return {"status": "ok", "service": "bi-quicker-api"}
@@ -244,9 +265,35 @@ def verify_payment(order_id: str, payload: PaymentVerifyPayload, authorization: 
         try: data = verify_transaction(payload.reference)
         except RuntimeError as exc: raise HTTPException(status_code=503, detail=str(exc)) from exc
         if data.get("status") != "success" or int(data.get("amount", 0)) != round(row.total * 100) or data.get("currency") != "NGN": raise HTTPException(status_code=400, detail="Payment could not be verified for the expected amount")
-        payment.update({"status": "success", "confirmed": True, "verifiedAt": utcnow(), "gatewayTransactionId": data.get("id")}); row.payment_json = dump(payment)
-        if row.status == "Awaiting payment": row.status = "Paid"
-        tracking = load(row.tracking_json, []); tracking[1]["done"], tracking[1]["at"] = True, payment["verifiedAt"]; row.tracking_json = dump(tracking); db.commit(); return order_dict(row)
+        mark_payment_success(row, data); db.commit(); return order_dict(row)
+
+@app.post("/api/payments/paystack/webhook")
+async def paystack_webhook(request: Request):
+    secret = os.environ.get("PAYSTACK_SECRET_KEY", "").strip()
+    if not secret:
+        return JSONResponse({"status": "ignored"}, status_code=503)
+    signature = request.headers.get("x-paystack-signature", "")
+    body = await request.body()
+    expected = hmac.new(secret.encode(), body, hashlib.sha512).hexdigest()
+    if not signature or not hmac.compare_digest(signature, expected):
+        return JSONResponse({"detail": "Invalid signature"}, status_code=401)
+    try:
+        event = json.loads(body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return JSONResponse({"detail": "Invalid JSON"}, status_code=400)
+    if event.get("event") != "charge.success":
+        return JSONResponse({"status": "ignored"})
+    data = event.get("data") or {}
+    reference = str(data.get("reference", ""))
+    if not reference:
+        return JSONResponse({"status": "ignored"})
+    with Session(engine) as db:
+        rows = db.scalars(select(OrderRecord)).all()
+        row = next((candidate for candidate in rows if load(candidate.payment_json, {}).get("reference") == reference), None)
+        if row is not None:
+            mark_payment_success(row, data)
+            db.commit()
+    return JSONResponse({"status": "ok"})
 
 @app.post("/api/routing/road")
 def road_route(payload: dict):
